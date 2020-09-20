@@ -1,3 +1,14 @@
+"""
+Run code to build xPass model and use this to identify and analyse midfielders
+good at making difficult passes.
+
+To run, you just need to put this script in a folder containing the Wyscout 
+data in a directory called 'data/'
+
+If the Wyscout data is elsewhere, change the variable data_folder to point to
+the actual location of the data
+"""
+
 import json
 import os
 import numpy as np
@@ -23,7 +34,7 @@ def load_wyscout_event_data(data_folder='data/'):
     put all data in a single dataframe, which is returned.
     """
     
-    data_folder = data_folder.strip('/')
+    data_folder = data_folder.rstrip('/').strip('"')
     
     event_files = []
     events = []
@@ -47,7 +58,7 @@ def get_competition_id(competition_name, data_folder='data'):
     """
     Open competitions data json and get competition id for requested competition
     """
-    data_folder = data_folder.strip('/')
+    data_folder = data_folder.rstrip('/').strip('"')
 
     with open(f'{data_folder}/competitions.json', encoding="utf8") as json_data:
         competition_data = pd.DataFrame(json.load(json_data))
@@ -63,7 +74,7 @@ def get_wyscout_match_ids_for_competition(competition_id, data_folder='data'):
     json files for match data and get match ids for all matches from desired 
     competition
     """
-    data_folder = data_folder.strip('/')
+    data_folder = data_folder.rstrip('/').strip('"')
     
     match_files = []
     matches = []
@@ -104,10 +115,12 @@ def get_player_data(data_folder='data/'):
     """
     Get Wyscout player data and return in a dataframe
     """
-    data_folder = data_folder.strip('/')
+    data_folder = data_folder.strip('/').strip('"')
     with open(f'{data_folder}/players.json', encoding="utf8") as json_data:
         player_data = pd.DataFrame(json.load(json_data))
     
+    player_data['player_position'] = player_data['role'].apply(lambda x: x['name'])
+
     return player_data
 
 
@@ -524,7 +537,7 @@ def plot_event_heatmap(y_events, x_events, title, no_of_bins=10, file_name=None)
     plt.gca().set_aspect('equal', adjustable='box')
     
     if file_name is not None:
-        fig.savefig(f'Output/{file_name}.pdf', dpi=300)   
+        fig.savefig(f'{file_name}.pdf', dpi=300)
     
     plt.show()
 
@@ -585,7 +598,7 @@ def plot_relationship_scatter(pass_data, variable_to_plot,
         plt.title(title)
     
     if file_name is not None:
-        fig.savefig(f'Output/{file_name}.pdf', dpi=300) 
+        fig.savefig(f'{file_name}.pdf', dpi=300)
         
     plt.show()
 
@@ -812,7 +825,7 @@ def plot_calibration_curve(pass_data_with_predictions, file_name=None):
     ax1.set_title('Calibration plots  (reliability curve)')
     
     if file_name is not None:
-        plt.savefig(f'Output/{file_name}.pdf', dpi=300, bbox_inches="tight")
+        plt.savefig(f'{file_name}.pdf', dpi=300, bbox_inches="tight")
     plt.show()
     
 
@@ -908,8 +921,8 @@ plot_relationship_scatter(pass_data, 'pass_start_y',
 #      'smart_pass', 'launch', 'cross', 'hand_pass'])
     
 pass_data_with_xPass = fit_and_evaluate_model(
-    pass_data, 
-    ['pass_start_x', 'pass_start_y', 'pass_start_x_squared', 'pass_start_y_squared', 
+    pass_data,
+    ['pass_start_x', 'pass_start_y', 'pass_start_x_squared', 'pass_start_y_squared',
      'start_coords_product', 'simple_pass', 'high_pass', 'head_pass',
      'smart_pass', 'launch', 'cross', 'hand_pass', 'start_third_of_field',
      'end_third_of_field', 'pitch_progression_score', 'angle_of_pass',
@@ -947,7 +960,6 @@ plt.show()
 # ourselves to looking at passes which have a 80% chance or lower of being 
 # successful accoring to our model
 
-
 low_probability_passes = pass_data_for_competition[pass_data_for_competition['xPass'] <= 0.8]
 player_data = get_player_data(data_folder)
 
@@ -957,7 +969,7 @@ total_x_pass.reset_index(inplace=True)
 total_passes = low_probability_passes[['playerId', 'eventId']].groupby('playerId').count()
 total_passes.reset_index(inplace=True)
 total_passes = total_passes.rename(columns={'eventId': 'pass_attempt_count'})
-player_data_with_total_xPass = total_x_pass.merge(pass_data_for_competition, left_on='playerId', right_on='wyId')
+player_data_with_total_xPass = total_x_pass.merge(player_data, left_on='playerId', right_on='wyId')
 player_data_with_total_xPass = player_data_with_total_xPass.merge(total_passes, on='playerId')
 player_data_with_total_xPass = player_data_with_total_xPass[player_data_with_total_xPass['player_position'] == 'Midfielder']
 player_data_with_total_xPass['xPass_per_pass'] = player_data_with_total_xPass['pass_outcome_vs_xPass'] / player_data_with_total_xPass['pass_attempt_count']
@@ -972,4 +984,3 @@ player_id_to_plot = 120339
 plot_heatmaps_for_player(player_id_to_plot, pass_data_for_competition, player_name_to_plot)
 plot_probability_difference_heatmap_for_player(player_id_to_plot, player_name_to_plot, pass_data_for_competition,
                                                player_data, 'Midfielder')
-
