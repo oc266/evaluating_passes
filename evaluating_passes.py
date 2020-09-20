@@ -871,6 +871,12 @@ pass_data_pipeline.add_filters([
 pass_data = pass_data_pipeline.run_get_pass_data_pipeline(event_data)
 
 # Look at heatmaps for the pitch for all passes, completed passes and failed passes
+"""
+Let's start by simply plotting a heatmap of pass start co-ordinates for all passes, 
+completed passes and uncompleted passes to see how these differ. We expect to see 
+more passes fail higher up the pitch and from positions where balls are typically 
+played into the box (ie, crosses, through balls, etc).
+"""
 x_start_metres = pass_data['pass_start_x'] * 105 / 100
 y_start_metres = pass_data['pass_start_y'] * 65 / 100
 # All passes
@@ -892,11 +898,34 @@ plot_event_heatmap(y_start_metres[~pass_data['success']],
 plot_relationship_scatter(pass_data, 'pass_start_x',
                          title='Probability of pass success based on position in length of pitch',
                          file_name='relationship_between_x_and_pass_success')
+"""
+In the x-direction (ie, along the length of the pitch) this confirms what we can 
+see in the plot of the pitch above:
 
+Near a team's own goal line passes have a middling probability of success. Here 
+passes may be defensive clearances
+In the middle of the park, passes are most likely to be successful. Here teams 
+are more likely to have the ball under less pressure from opponents
+In the final third probability of pass success increases. Passes need to be 
+more creative here to break through an opponent defensive line, and many will be 
+crosses which tend to be less successful.
+This looks like a quadratic relationship, so likely that including x**2 will 
+improve the model
+"""
 plot_relationship_scatter(pass_data, 'pass_start_y', 
                           title='Probability of pass success based on position in width of pitch',
                           file_name='relationship_between_x_and_pass_success')
+"""
+In the y-direction (ie, along the width of the pitch):
 
+Passes are less likely to be successful nearer the touch lines. This is not 
+surprising as here we're more likely to see crosses, or other balls into the box
+Passes are more likely to be successful in the centre of the width. Based on 
+the heatmaps above these are likely to be dominated by passes in the centre of 
+the park, where there is often an emphasis on keeping posession.
+This looks like a quadratic relationship, so likely that including y**2 will 
+improve the model
+"""
 
 # Fitting logistic regression models
 
@@ -928,6 +957,13 @@ pass_data_with_xPass = fit_and_evaluate_model(
      'end_third_of_field', 'pitch_progression_score', 'angle_of_pass',
      'distance_of_pass', 'end_distance_from_goal', 'end_angle_between_goalpost'],
      plot_file_name='calibration_curve_all_features_model')
+"""
+As we incrementally add features,the calibration curve improves, so we pick the
+final model to use.
+Important to note that P values are close to zero for all features, so all have
+a relationship to pass success.
+"""
+
 
 # With this model, we lets look try to identify good passers.
 # We define a good passer for the purposes of this as a passer who succeeds 
